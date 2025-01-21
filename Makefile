@@ -1,22 +1,25 @@
-# Toolchain settings
-CC      = xc8-cc
-MCU     = 16F877A
-CFLAGS  = -mcpu=$(MCU) -S  # -S outputs assembler
-HEXFLAGS = -mcpu=$(MCU)
-PROG    = pk2cmd             # Change if using another programmer
-PROGFLAGS = -M -PPIC$(MCU) -Fmain.hex -Y
+CC			= xc8-cc							# compiler type
+MCU			= 16F877A							# chip type
+CFLAGS		= -mcpu=$(MCU) -S
+HEXFLAGS	= -mcpu=$(MCU)
+PROG		= pk2cmd							# programmer type
+PROGFLAGS	= -M -PPIC$(MCU) -Fmain.hex -Y
 
 # Files
 SRC = master_up_down.c
-ASM = $(SRC:.c=.asm)
-HEX = $(SRC:.c=.hex)
+ASM_DIR = asm
+ASM = $(ASM_DIR)/$(SRC:.c=.asm)
+HEX = $(ASM_DIR)/$(SRC:.c=.hex)
 
 all: $(HEX)
 
-$(ASM): src/$(SRC)
-	$(CC) $(CFLAGS) $<
+$(ASM_DIR):
+	mkdir -p $(ASM_DIR)
 
-$(HEX): src/$(SRC)
+$(ASM): src/$(SRC) | $(ASM_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(HEX): src/$(SRC) | $(ASM_DIR)
 	$(CC) $(HEXFLAGS) $< -o $@
 
 flash: $(HEX)
