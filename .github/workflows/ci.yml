@@ -13,9 +13,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
-          gh release download \
+          gh release download xcc3 \
             --repo ${{ github.repository }} \
-            --tag v1.0.0 \
             --pattern 'xc8-v3.00-full-install-linux-x64-installer.run' \
             --output xc8-installer.run
           sudo ./xc8-installer.run --mode unattended --netservername aidan.gannon --"Add to PATH" 1
