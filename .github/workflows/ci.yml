@@ -21,7 +21,7 @@ jobs:
         run: |
           chmod +x xc8-installer.run
           sudo ./xc8-installer.run --help
-          sudo ./xc8-installer.run --mode unattended --netservername aidan.gannon --"Add To PATH" 1
+          sudo ./xc8-installer.run --mode unattended --netservername aidan.gannon --"Add to PATH" 1
       - name: make
         run: |
           make
