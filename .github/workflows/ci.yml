@@ -20,8 +20,9 @@ jobs:
       - name: Install XC8
         run: |
           chmod +x xc8-installer.run
-          sudo ./xc8-installer.run --help
           sudo ./xc8-installer.run --mode unattended --netservername aidan.gannon --"Add to PATH" 1
+      - name: Add XC8 to PATH
+        run: echo "/opt/microchip/xc8/v2.45/bin" >> $GITHUB_PATH
       - name: make
         run: |
           make
