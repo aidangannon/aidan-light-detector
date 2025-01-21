@@ -1,7 +1,8 @@
 #define _XTAL_FREQ 4000000UL
 #include <xc.h>
-const int INSTRUCTION_PERIOD=1;//time of clock speed in microseconds
-const int PWM_PERIOD=20000; //the time period of PWM for servos in microseconds
+
+const int INSTRUCTION_PERIOD = 1;//time of clock speed in microseconds
+const int PWM_PERIOD = 20000; //the time period of PWM for servos in microseconds
 long pwmPeriod; //value that needs to be moved into
 long pwmHighPeriod;
 long pwmLowPeriod;
@@ -19,7 +20,7 @@ char positionBuffSlave;
 
 char positionSlave;
 char position;
-char velocityPeriod=1; //ammount of time it takes to move 1 increment
+char velocityPeriod = 1; //ammount of time it takes to move 1 increment
 char isUp;
 char isDown;//used to accelerate the arm in a direction
 

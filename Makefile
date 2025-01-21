@@ -6,20 +6,24 @@ PROG		= pk2cmd							# programmer type
 PROGFLAGS	= -M -PPIC$(MCU) -Fmain.hex -Y
 
 # Files
-SRC = master_up_down.c
+SRC = slave_left_right.c master_up_down.c
 ASM_DIR = asm
-ASM = $(ASM_DIR)/$(SRC:.c=.asm)
-HEX = $(ASM_DIR)/$(SRC:.c=.hex)
+
+# Generate ASM and HEX file lists from SRC
+ASM = $(patsubst %.c,$(ASM_DIR)/%.asm,$(SRC))
+HEX = $(patsubst %.c,$(ASM_DIR)/%.hex,$(SRC))
 
 all: $(HEX)
 
 $(ASM_DIR):
 	mkdir -p $(ASM_DIR)
 
-$(ASM): src/$(SRC) | $(ASM_DIR)
+# Compile .c to .asm
+$(ASM_DIR)/%.asm: src/%.c | $(ASM_DIR)
 	$(CC) $(CFLAGS) $< -o $@
 
-$(HEX): src/$(SRC) | $(ASM_DIR)
+# Compile .c to .hex
+$(ASM_DIR)/%.hex: src/%.c | $(ASM_DIR)
 	$(CC) $(HEXFLAGS) $< -o $@
 
 flash: $(HEX)

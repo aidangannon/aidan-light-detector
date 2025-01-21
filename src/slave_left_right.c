@@ -1,9 +1,9 @@
-#include <system.h>
+#define _XTAL_FREQ 4000000UL
+#include <xc.h>
 
-const int _XTAL_FREQ=4000000;//frequency of crystal resonator
-const int INSTRUCTION_PERIOD=1;//time of clock speed in microseconds
-const int PWM_PERIOD=20000; //the time period of PWM for servos in microseconds
-long pwmPeriod; //value that needs to be moved into
+const int INSTRUCTION_PERIOD = 1; // time of clock speed in microseconds
+const int PWM_PERIOD = 20000; // the time period of PWM for servos in microseconds
+long pwmPeriod; // value that needs to be moved into
 long pwmHighPeriod;
 long pwmLowPeriod;
 
@@ -15,275 +15,267 @@ char ldr4;
 char leftLdr;
 char rightLdr;
 
-char positionBuff=0;
+char positionBuff = 0;
 
 char position;
-char velocityPeriod=1; //ammount of time it takes to move 1 increment
+char velocityPeriod = 1; // amount of time it takes to move 1 increment
 char isLeft;
-char isRight;//used to accelerate the arm in a direction
+char isRight; // used to accelerate the arm in a direction
 
-//values that determine if signal is locked
+// values that determine if signal is locked
 char lock;
 
-
 //--
-//UART
+// UART
 //--
 void initUART()
 {
-    set_bit(trisc,6);
-    set_bit(trisc,7);//setting trisc<6:7> as inputs
-    
-    txsta = 0x24;//enables transmission and high speed
-    rcsta = 0x90;//enables trisc<6:7> ports
-    
-    spbrg = 25;//timer
-    
-    clear_bit(trisc,3);//status line send
-    set_bit(trisc,2);//status line listen
+    TRISC |= (1 << 6);
+    TRISC |= (1 << 7); // setting TRISC<6:7> as inputs
+
+    TXSTA = 0x24; // enables transmission and high speed
+    RCSTA = 0x90; // enables TRISC<6:7> ports
+
+    SPBRG = 25; // timer
+
+    TRISC &= ~(1 << 3); // clear TRISC3 - status line send
+    TRISC |= (1 << 2);  // set TRISC2 - status line listen
 }
 
 void transUART(char data)
 {
-    txreg=data;
-    while((pir1 & 0x10)==0);
-    clear_bit(pir1,4);
+    TXREG = data;
+    while ((PIR1 & 0x10) == 0);
+    PIR1 &= ~(1 << 4);
 }
 
 void sendStatusLine(char status)
 {
-    switch(status)
+    switch (status)
     {
         case 1:
-            set_bit(portc,3);
+            PORTC |= (1 << 3);
             break;
         case 0:
-            clear_bit(portc,3);
+            PORTC &= ~(1 << 3);
             break;
     }
 }
 
 char listenStatusLine(char status)
 {
-    switch(status)
+    switch (status)
     {
         case 1:
-            if((portc & 0x04)==1)
-            {return 1;}
-            else{return 0;}
-            
+            if ((PORTC & 0x04) == 0x04)
+                return 1;
+            else
+                return 0;
         case 0:
-            if((portc & 0x04)==0)
-            {return 1;}
-            else{return 0;}
+            if ((PORTC & 0x04) == 0)
+                return 1;
+            else
+                return 0;
     }
+    return 0;
 }
 
 //--
-//DELAY
+// DELAY
 //--
 void delay(int x)
 {
-    while(x != 0)
-    {   
-        for(int z=1000;z!=0;z--);// wait on overflow
+    while (x != 0)
+    {
+        for (int z = 1000; z != 0; z--); // wait on overflow
         x--;
     }
 }
 
-
 //--
-//SERVO
+// SERVO
 //--
 void initPWMServos()
 {
-    //##
-    //initialises everything
-    //##
-    
-	//calculating pwm high & low periods
-    pwmPeriod=PWM_PERIOD/INSTRUCTION_PERIOD;
-    
-    t1con=0x00; //sets value of prescaler to 8
-    
-    //setting value of compare register
-    ccpr1h = 0xff;
-    ccpr1l = 0xff;
-    
-    //trigger interupt when tmr1==compared value
-    ccp1con=0x0B;
-    
-    //reseting tmr1
-    tmr1h = 0;
-    tmr1l = 0;
-    
-    clear_bit(pir1,2);
-    
-    //ENABLING TMR1 CCP INTERUPT
-    set_bit(pie1,2); //enables the ccp interupt
-    intcon = 0xC0; //enables peripheral interupts
-    set_bit(t1con,0); //enables tmr1
-	
+    // ##
+    // initializes everything
+    // ##
+
+    // calculating pwm high & low periods
+    pwmPeriod = PWM_PERIOD / INSTRUCTION_PERIOD;
+
+    T1CON = 0x00; // sets value of prescaler to 8
+
+    // setting value of compare register
+    CCPR1H = 0xFF;
+    CCPR1L = 0xFF;
+
+    // trigger interrupt when TMR1 == compared value
+    CCP1CON = 0x0B;
+
+    // resetting TMR1
+    TMR1H = 0;
+    TMR1L = 0;
+
+    PIR1 &= ~(1 << 2);
+
+    // ENABLING TMR1 CCP INTERRUPT
+    PIE1 |= (1 << 2); // enables the CCP interrupt
+    INTCON = 0xC0;    // enables peripheral interrupts
+    T1CON |= (1 << 0); // enables TMR1
 }
 
 char setDutyCycle(char multiplier)
 {
-    //##
-    //sets duty cycle of the PWM signal for servos
-    //##
-    
-    //range of the servos
-    if(multiplier>192 || multiplier<40){
+    // ##
+    // sets duty cycle of the PWM signal for servos
+    // ##
+
+    // range of the servos
+    if (multiplier > 192 || multiplier < 40)
+    {
         return 0;
-    }else{
-        long highValue=12*multiplier;
-        pwmHighPeriod=highValue;
-        pwmLowPeriod=pwmPeriod-highValue;
+    }
+    else
+    {
+        long highValue = 12 * multiplier;
+        pwmHighPeriod = highValue;
+        pwmLowPeriod = pwmPeriod - highValue;
         return 1;
     }
 }
 
 void moveLeft()
 {
-    //accelerates the velocity
-    if(isLeft==1){
+    // accelerates the velocity
+    if (isLeft == 1)
+    {
         velocityPeriod++;
-    }else{
-        velocityPeriod=1;
     }
-    
-    //the servo is left and not right
-    isLeft=1;
-    isRight=0;
-    
-    if(setDutyCycle(position+velocityPeriod)==1){
-        position+=velocityPeriod;
-    }else{
-        //no movement update
+    else
+    {
+        velocityPeriod = 1;
     }
-    
+
+    // the servo is left and not right
+    isLeft = 1;
+    isRight = 0;
+
+    if (setDutyCycle(position + velocityPeriod) == 1)
+    {
+        position += velocityPeriod;
+    }
+    else
+    {
+        // no movement update
+    }
 }
 
-char moveRight()
+void moveRight()
 {
-    //accelerates the velocity
-    if(isRight==1){
+    // accelerates the velocity
+    if (isRight == 1)
+    {
         velocityPeriod++;
-    }else{
-        velocityPeriod=1;
     }
-    
-    //the servo is right and not left
-    isLeft=0;
-    isRight=1;
-    
-    if(setDutyCycle(position-velocityPeriod)==1){
-        position-=velocityPeriod;
-    }else{
-        //no movement
+    else
+    {
+        velocityPeriod = 1;
     }
-    
+
+    // the servo is right and not left
+    isLeft = 0;
+    isRight = 1;
+
+    if (setDutyCycle(position - velocityPeriod) == 1)
+    {
+        position -= velocityPeriod;
+    }
+    else
+    {
+        // no movement
+    }
 }
 
+// sets ccp register to length of time (clock pulses) for low period of PWM
 void makeCCPLowPWMPeriod()
 {
-    //##
-    //set ccp register to length of time (clock pulses)
-    //-for high period of PWM
-    //##
-    
-    //shifts 16 bit number into 2 8 bit registers
-    ccpr1h = pwmLowPeriod>>8;
-    ccpr1l = pwmLowPeriod;
+    CCPR1H = (unsigned char)(pwmLowPeriod >> 8);
+    CCPR1L = (unsigned char)pwmLowPeriod;
 }
 
+// sets ccp register to length of time (clock pulses) for high period of PWM
 void makeCCPHighPWMPeriod()
 {
-    //##
-    //set ccp register to length of time (clock pulses)
-    //-for low period of PWM
-    //##
-    
-    ccpr1h = pwmHighPeriod>>8;
-    ccpr1l = pwmHighPeriod;
-    
+    CCPR1H = (unsigned char)(pwmHighPeriod >> 8);
+    CCPR1L = (unsigned char)pwmHighPeriod;
 }
 
-
 //--
-//LDRs
+// LDRs
 //--
 void initLDR()
 {
+    // 32 Fosc clock conversion
+    // powering on ADC module
+    ADCON0 = 0x41;
 
-    //32 Fosc clock conversion
-    //powering on ADC module
-    adcon0=0x41;
-    
-    //all porta analog
-    //adresh stores 8 bit value of ADC
-    adcon1=0x00;
-    
+    // all PORTA analog
+    // ADRESH stores 8 bit value of ADC
+    ADCON1 = 0x00;
 }
 
 void getLDR(char value)
 {
-    //##
-    //saves LDRs to respective values
-    //##
-    
-    int ldrValue;
-    clear_bit(adcon0,5);
-    switch(value){
+    // ##
+    // saves LDRs to respective values
+    // ##
+
+    char ldrValue;
+    ADCON0 &= ~(1 << 5);
+    switch (value)
+    {
         case 0:
-            //moves value 000 into CHS bit
-            clear_bit(adcon0,4);
-            clear_bit(adcon0,3);
+            ADCON0 &= ~(1 << 4);
+            ADCON0 &= ~(1 << 3);
             break;
         case 1:
-            //moves value 001 into CHS bit
-            clear_bit(adcon0,4);
-            set_bit(adcon0,3);
+            ADCON0 &= ~(1 << 4);
+            ADCON0 |= (1 << 3);
             break;
         case 2:
-            //moves value 010 into CHS bit
-            set_bit(adcon0,4);
-            clear_bit(adcon0,3);
+            ADCON0 |= (1 << 4);
+            ADCON0 &= ~(1 << 3);
             break;
         case 3:
-            //moves value 011 into CHS bit
-            set_bit(adcon0,4);
-            set_bit(adcon0,3);
+            ADCON0 |= (1 << 4);
+            ADCON0 |= (1 << 3);
             break;
     }
-    set_bit(adcon0,2);
-    while(adcon0 & 0x04);
-    ldrValue=adresh;
-    switch(value){
+    ADCON0 |= (1 << 2);
+    while (ADCON0 & 0x04)
+        ;
+    ldrValue = ADRESH;
+    switch (value)
+    {
         case 0:
-            //moves value into ldr 1 variable
-            ldr1=ldrValue;
+            ldr1 = ldrValue;
             break;
         case 1:
-            //moves value into ldr 2 variable
-            ldr2=ldrValue;
+            ldr2 = ldrValue;
             break;
         case 2:
-            //moves value into ldr 3 variable
-            ldr3=ldrValue;
+            ldr3 = ldrValue;
             break;
         case 3:
-            //moves value into ldr 4 variable
-            ldr4=ldrValue;
+            ldr4 = ldrValue;
             break;
     }
-    
 }
 
 void getLDRs()
 {
-    //gets all ldr values and saves them
-    //to public attributes
+    // gets all ldr values and saves them to public attributes
     getLDR(0);
     getLDR(1);
     getLDR(2);
@@ -292,74 +284,80 @@ void getLDRs()
 
 void avLDRs()
 {
-    //takes mean average of left and right ldrs
-    rightLdr=((ldr2+ldr4)/2);
-    leftLdr=((ldr1+ldr3)/2);
+    // takes mean average of left and right ldrs
+    rightLdr = ((ldr2 + ldr4) / 2);
+    leftLdr = ((ldr1 + ldr3) / 2);
 }
 
-
 //--
-//MAIN
+// MAIN
 //--
 void main()
 {
-    
-    //initialising UART
+    // initializing UART
     initUART();
-    
-    //setting portb as output
-    trisb=0;
-    
+
+    // setting PORTB as output
+    TRISB = 0;
+
     initLDR();
     initPWMServos();
-    
-    clear_bit(portc,3);//clear send line
-    
-    //starting first pulse
-    portb=0;
-	set_bit(portb,1);
-    position=112;
+
+    PORTC &= ~(1 << 3); // clear send line
+
+    // starting first pulse
+    PORTB = 0;
+    PORTB |= (1 << 1);
+    position = 112;
     setDutyCycle(position);
     delay(200);
-    while(1){
-        
-        //gets the LDR values saves then upLDRs and downLDRs
+
+    while (1)
+    {
+        // gets the LDR values saves then upLDRs and downLDRs
         getLDRs();
         avLDRs();
-        
-        //movement for left/right motor
-        if(((rightLdr-leftLdr<14)&&(rightLdr-leftLdr>0))||((rightLdr-leftLdr>-14)&&(rightLdr-leftLdr<0))){
-            if(positionBuff != position){
+
+        // movement for left/right motor
+        if (((rightLdr - leftLdr < 14) && (rightLdr - leftLdr > 0)) || ((rightLdr - leftLdr > -14) && (rightLdr - leftLdr < 0)))
+        {
+            if (positionBuff != position)
+            {
                 transUART(position);
                 positionBuff = position;
             }
         }
-        else if(rightLdr<leftLdr){
+        else if (rightLdr < leftLdr)
+        {
             moveLeft();
-        }else if(leftLdr<rightLdr){
+        }
+        else if (leftLdr < rightLdr)
+        {
             moveRight();
         }
-        
+
         delay(10);
     }
 }
 
-
 //--
-//INTERUPT
+// INTERRUPT
 //--
-void interrupt(void)
+void __interrupt() interrupt(void)
 {
-    if((CCP1IF) != 0)
+    if (CCP1IF != 0)
     {
-        clear_bit(pir1,2);
-        if(portb & 0x02){
-            clear_bit(portb,1);
+        PIR1 &= ~(1 << 2);
+        if (PORTB & 0x02)
+        {
+            PORTB &= ~(1 << 1);
             makeCCPLowPWMPeriod();
-		}else if(portb==0){
-            set_bit(portb,1);
+        }
+        else if (PORTB == 0)
+        {
+            PORTB |= (1 << 1);
             makeCCPHighPWMPeriod();
-		}
-        clear_bit(pir1,2);
+        }
+        PIR1 &= ~(1 << 2);
     }
 }
