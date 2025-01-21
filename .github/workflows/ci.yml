@@ -18,4 +18,10 @@ jobs:
             --pattern 'xc8-v3.00-full-install-linux-x64-installer.run' \
             --output xc8-installer.run
           sudo ./xc8-installer.run --mode unattended --netservername aidan.gannon --"Add to PATH" 1
+      - name: Install XC8
+        run: |
+          chmod +x xc8-installer.run
+          sudo ./xc8-installer.run --mode unattended --netservername aidan.gannon --AddToPATH 1
+      - name: make
+        run: |
           make
