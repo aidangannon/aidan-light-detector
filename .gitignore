@@ -3,3 +3,6 @@
 
 # assembly generation
 /asm
+
+# cmake
+/build
