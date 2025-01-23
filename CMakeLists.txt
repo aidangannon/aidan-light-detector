@@ -1,59 +1,29 @@
 cmake_minimum_required(VERSION 3.15)
 project(PIC_XC8_Project C)
-include_directories(${CMAKE_SOURCE_DIR}/src)
 
-set(CMAKE_C_COMPILER /opt/microchip/xc8/v3.00/bin/xc8-cc)
+option(USE_XC8 "Build using XC8 compiler and Makefile" OFF)
 
-set(MCU pic16f877a)
-set(CFLAGS "-mcpu=${MCU}")
-set(HEXFLAGS "-mcpu=${MCU}")
+if(USE_XC8)
+    message(STATUS "building with XC8 - delegating to Makefile")
 
-set(SRC
-    src/slave_left_right.c
-    src/master_up_down.c
-)
-
-set(ASM_DIR ${CMAKE_SOURCE_DIR}/asm)
-
-file(MAKE_DIRECTORY ${ASM_DIR})
-
-foreach(SRCFILE IN LISTS SRC)
-    get_filename_component(FILENAME ${SRCFILE} NAME_WE)
-
-    set(ASM_FILE ${ASM_DIR}/${FILENAME}.asm)
-    set(HEX_FILE ${ASM_DIR}/${FILENAME}.hex)
-
-    add_custom_command(
-            OUTPUT ${ASM_FILE}
-            COMMAND ${CMAKE_C_COMPILER} ${CFLAGS} -S ${CMAKE_SOURCE_DIR}/${SRCFILE} -o ${ASM_FILE}
-            DEPENDS ${CMAKE_SOURCE_DIR}/${SRCFILE}
-            COMMENT "Compiling ${SRCFILE} to ASM"
-            VERBATIM
+    add_custom_target(
+            build_xc8 ALL
+            COMMAND ${CMAKE_MAKE_PROGRAM}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Building with XC8 Makefile"
     )
+else()
+    message(STATUS "buildng with GCC")
 
-    add_custom_command(
-            OUTPUT ${HEX_FILE}
-            COMMAND ${CMAKE_C_COMPILER} ${HEXFLAGS} ${CMAKE_SOURCE_DIR}/${SRCFILE} -o ${HEX_FILE}
-            DEPENDS ${CMAKE_SOURCE_DIR}/${SRCFILE}
-            COMMENT "Compiling ${SRCFILE} to HEX"
-            VERBATIM
+    set(CMAKE_C_STANDARD 99)
+
+    file(GLOB SRC_FILES src/*.c)
+
+    add_executable(${PROJECT_NAME} ${SRC_FILES})
+
+    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR})
+
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+            EXCLUDE_FROM_ALL FALSE
     )
-
-    list(APPEND ASM_FILES ${ASM_FILE})
-    list(APPEND HEX_FILES ${HEX_FILE})
-endforeach()
-
-add_custom_target(asm_files ALL DEPENDS ${ASM_FILES})
-
-add_custom_target(all_hex ALL DEPENDS ${HEX_FILES})
-
-add_custom_target(asm_flash
-        COMMAND pk2cmd -M -PPIC${MCU} -F${ASM_DIR}/main.hex -Y
-        DEPENDS all_hex
-        COMMENT "Flashing device"
-)
-
-add_custom_target(asm_clean
-        COMMAND ${CMAKE_COMMAND} -E remove ${ASM_FILES} ${HEX_FILES}
-        COMMENT "Cleaning generated files"
-)
+endif()

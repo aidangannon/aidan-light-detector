@@ -1,4 +1,4 @@
-#include <xc.h>
+#include "xc8_shim.h"
 #include "common.h"
 
 long pwmPeriod; //value that needs to be moved into
@@ -18,7 +18,7 @@ char positionBuffSlave;
 
 char positionSlave;
 char position;
-char velocityPeriod = 1; //ammount of time it takes to move 1 increment
+char velocityPeriod = 1; //amount of time it takes to move 1 increment
 char isUp;
 char isDown;//used to accelerate the arm in a direction
 
@@ -47,7 +47,7 @@ void initUART()
 void transUART(char data)
 {
     TXREG=data;
-    while((PIR1 & 0x10)==0);
+    while((PIR1 & 0x10)==0) {}
     PIR1 &= ~(1 << 4);
 }
 
@@ -58,7 +58,8 @@ void delay(int x)
 {
     while(x != 0)
     {
-        for(int z=1000;z!=0;z--);// wait on overflow
+        for(int z=1000;z!=0;z--) {}
+        // wait on overflow
         x--;
     }
 }
@@ -82,18 +83,18 @@ void initPWMServos()
     CCPR1H = 0xff;
     CCPR1L = 0xff;
 
-    //trigger interupt when tmr1==compared value
+    //trigger interrupt when tmr1==compared value
     CCP1CON=0x0B;
 
-    //reseting tmr1
+    //resetting tmr1
     TMR1H = 0;
     TMR1L = 0;
 
     PIR1 &= ~(1 << 2);
 
-    //ENABLING TMR1 CCP INTERUPT
-    PIE1 |= (1 << 2); //enables the ccp interupt
-    INTCON = 0xC0; //enables peripheral interupts
+    //ENABLING TMR1 CCP INTERRUPT
+    PIE1 |= (1 << 2); //enables the ccp interrupt
+    INTCON = 0xC0; //enables peripheral interrupts
     T1CON |= (1 << 0); //enables tmr1
 
 }
@@ -128,8 +129,8 @@ void moveUp()
     isUp=1;
     isDown=0;
 
-    if(setDutyCycle(position+velocityPeriod)==1){
-        position+=velocityPeriod;
+    if(setDutyCycle((char)(position+velocityPeriod))==1){
+        position = (char)(position + velocityPeriod);
     }else{
         //no movement update
     }
@@ -149,8 +150,8 @@ void moveDown()
     isUp=0;
     isDown=1;
 
-    if(setDutyCycle(position-velocityPeriod)==1){
-        position-=velocityPeriod;
+    if(setDutyCycle((char)(position-velocityPeriod))==1){
+        position = (char)(position - velocityPeriod);
     }else{
         //no movement
     }
@@ -163,7 +164,7 @@ void makeCCPLowPWMPeriod()
     //-for high period of PWM
     //##
 
-    //shifts 16 bit number into 2 8 bit registers
+    //shifts 16-bit number into 2 8 bit registers
     CCPR1H = (unsigned char)pwmLowPeriod>>8;
     CCPR1L = (unsigned char)pwmLowPeriod;
 }
@@ -203,7 +204,6 @@ void getLDR(char value)
     //saves LDRs to respective values
     //##
 
-    char ldrValue;
     ADCON0 &= ~(1 << 5);
     switch(value){
         case 0:
@@ -226,10 +226,11 @@ void getLDR(char value)
             ADCON0 |= (1 << 4);
             ADCON0 |= (1 << 3);
             break;
+        default: ;
     }
     ADCON0 |= (1 << 2);
-    while(ADCON0 & 0x04);
-    ldrValue=ADRESH;
+    while(ADCON0 & 0x04) {}
+    char ldrValue = (char) ADRESH;
     switch(value){
         case 0:
             //moves value into ldr 1 variable
@@ -247,6 +248,7 @@ void getLDR(char value)
             //moves value into ldr 4 variable
             ldr4=ldrValue;
             break;
+        default: ;
     }
 
 }
@@ -264,8 +266,8 @@ void getLDRs()
 void avLDRs()
 {
     //takes mean average of left and right ldrs
-    downLdr=((ldr1+ldr4)/2);
-    upLdr=((ldr2+ldr3)/2);
+    downLdr=(char)((ldr1+ldr4)/2);
+    upLdr=(char)((ldr2+ldr3)/2);
 }
 
 
@@ -293,6 +295,7 @@ void main()
     setDutyCycle(position);
     delay(200);
 
+    // ReSharper disable once CppDFAEndlessLoop
     while(1){
 
         //gets the LDR values saves then upLDRs and downLDRs
@@ -344,7 +347,7 @@ void __interrupt() interrupt(void)
     }
     if((PIR1 & 0x20)){
         PIR1 &= ~(1 << 5);
-        positionSlave = RCREG;
+        positionSlave = (char)RCREG;
     }
 
 }

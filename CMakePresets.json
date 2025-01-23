@@ -1,0 +1,26 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "ide",
+      "displayName": "IDE Default",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-ide",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "USE_XC8": "OFF"
+      }
+    },
+    {
+      "name": "xc8",
+      "displayName": "XC8 Build",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-xc8",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "USE_XC8": "ON"
+      }
+    }
+  ]
+}

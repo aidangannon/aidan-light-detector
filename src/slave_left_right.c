@@ -1,5 +1,5 @@
-#include <xc.h>
 #include "common.h"
+#include "xc8_shim.h"
 
 long pwmPeriod; // value that needs to be moved into
 long pwmHighPeriod;
@@ -43,7 +43,7 @@ void initUART()
 void transUART(char data)
 {
     TXREG = data;
-    while ((PIR1 & 0x10) == 0);
+    while ((PIR1 & 0x10) == 0) {}
     PIR1 &= ~(1 << 4);
 }
 
@@ -57,6 +57,7 @@ void sendStatusLine(char status)
         case 0:
             PORTC &= ~(1 << 3);
             break;
+        default: ;
     }
 }
 
@@ -74,6 +75,7 @@ char listenStatusLine(char status)
                 return 1;
             else
                 return 0;
+        default: ;
     }
     return 0;
 }
@@ -85,7 +87,8 @@ void delay(int x)
 {
     while (x != 0)
     {
-        for (int z = 1000; z != 0; z--); // wait on overflow
+        for (int z = 1000; z != 0; z--) {}
+        // wait on overflow
         x--;
     }
 }
@@ -159,9 +162,9 @@ void moveLeft()
     isLeft = 1;
     isRight = 0;
 
-    if (setDutyCycle(position + velocityPeriod) == 1)
+    if (setDutyCycle((char)(position + velocityPeriod)) == 1)
     {
-        position += velocityPeriod;
+        position = (char)(position + velocityPeriod);
     }
     else
     {
@@ -185,9 +188,9 @@ void moveRight()
     isLeft = 0;
     isRight = 1;
 
-    if (setDutyCycle(position - velocityPeriod) == 1)
+    if (setDutyCycle((char)(position - velocityPeriod)) == 1)
     {
-        position -= velocityPeriod;
+        position = (char)(position - velocityPeriod);
     }
     else
     {
@@ -229,7 +232,6 @@ void getLDR(char value)
     // saves LDRs to respective values
     // ##
 
-    char ldrValue;
     ADCON0 &= ~(1 << 5);
     switch (value)
     {
@@ -249,11 +251,12 @@ void getLDR(char value)
             ADCON0 |= (1 << 4);
             ADCON0 |= (1 << 3);
             break;
+        default: ;
     }
     ADCON0 |= (1 << 2);
     while (ADCON0 & 0x04)
         ;
-    ldrValue = ADRESH;
+    char ldrValue = (char)ADRESH;
     switch (value)
     {
         case 0:
@@ -268,6 +271,7 @@ void getLDR(char value)
         case 3:
             ldr4 = ldrValue;
             break;
+        default: ;
     }
 }
 
@@ -283,8 +287,8 @@ void getLDRs()
 void avLDRs()
 {
     // takes mean average of left and right ldrs
-    rightLdr = ((ldr2 + ldr4) / 2);
-    leftLdr = ((ldr1 + ldr3) / 2);
+    rightLdr = (char)((ldr2 + ldr4) / 2);
+    leftLdr = (char)((ldr1 + ldr3) / 2);
 }
 
 //--
@@ -310,6 +314,7 @@ void main()
     setDutyCycle(position);
     delay(200);
 
+    // ReSharper disable once CppDFAEndlessLoop
     while (1)
     {
         // gets the LDR values saves then upLDRs and downLDRs
