@@ -29,10 +29,13 @@ extern volatile unsigned char RCREG;
 
 #define __interrupt()
 
+#pragma message "Compiling without XC8 and without __XC8__ is defined"
+
 #endif
 
 #ifdef __XC8__
 
 #include <xc.h>
+#pragma message "Compiling with XC8 and __XC8__ is defined"
 
 #endif
