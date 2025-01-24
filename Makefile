@@ -1,33 +1,43 @@
 CC      	= /opt/microchip/xc8/v3.00/bin/xc8-cc
 MCU     	= 16F877A
-CFLAGS		= -mcpu=$(MCU) -S  -D__XC8__
+CFLAGS		= -mcpu=$(MCU) -c -D__XC8__
+ASMFLAGS	= -mcpu=$(MCU) -S -D__XC8__
 HEXFLAGS	= -mcpu=$(MCU) -D__XC8__
 PROG    	= pk2cmd
-PROGFLAGS	= -M -PPIC$(MCU) -Fmain.hex -Y
+PROGFLAGS	= -M -PPIC$(MCU) -F -Y
 
-SRC     := $(wildcard src/*.c)
-HDR     := $(wildcard src/*.h)
+$(call check_required, PROG_NAME)
+$(call check_required, PROG_DEFINES)
 
-ASM_DIR = asm
+ENTRY_FILE = entry.c
+BUILD_DIR = build
+SRC_DIR = src
+HDR := $(wildcard $(SRC_DIR)/*.h)
 
-ASM = $(patsubst src/%.c,$(ASM_DIR)/%.s,$(SRC))
-HEX = $(patsubst src/%.c,$(ASM_DIR)/%.hex,$(SRC))
+PROG_DIR = $(BUILD_DIR)/$(PROG_NAME)
 
-all: $(HEX) $(ASM)
+PROG_OBJ = $(PROG_DIR)/$(ENTRY_FILE:.c=.p1)
+PROG_HEX = $(PROG_DIR)/$(ENTRY_FILE:.c=.hex)
+PROG_ASM = $(PROG_DIR)/$(ENTRY_FILE:.c=.s)
 
-$(ASM_DIR):
-	mkdir -p $(ASM_DIR)
+all: $(PROG_HEX) $(PROG_HEX) $(PROG_ASM) $(PROG_ASM)
 
-$(ASM_DIR)/%.s: src/%.c | $(ASM_DIR)
-	$(CC) $(CFLAGS) $< -o $@
+$(PROG_DIR) $(PROG_DIR):
+	mkdir -p $@
 
-$(ASM_DIR)/%.hex: src/%.c | $(ASM_DIR)
-	$(CC) $(HEXFLAGS) $< -o $@
+$(PROG_OBJ): $(SRC_DIR)/$(ENTRY_FILE) $(HDR) | $(PROG_DIR)
+	$(CC) $(CFLAGS) $(PROG_DEFINES) $< -o $@
 
-flash: $(HEX)
-	$(PROG) $(PROGFLAGS)
+$(PROG_HEX): $(PROG_OBJ)
+	$(CC) $(HEXFLAGS) $(PROG_DEFINES) $^ -o $@
+
+$(PROG_ASM): $(SRC_DIR)/$(ENTRY_FILE) $(HDR) | $(PROG_DIR)
+	$(CC) $(ASMFLAGS) $(PROG_DEFINES) $< -o $@
+
+flash: $(PROG_HEX)
+	$(PROG) $(PROGFLAGS)$(PROG_HEX)
 
 clean:
-	rm -rf asm -r
+	rm -rf $(BUILD_DIR)
 
-.PHONY: all flash clean
+.PHONY: all flash-master flash-slave clean

@@ -68,10 +68,12 @@ void delay(int x)
 //--
 //SERVO
 //--
+// PWM functions now in common.c (but keeping master-specific implementations)
+
 void initPWMServos()
 {
     //##
-    //initialises everything
+    //initialises everything - MASTER SPECIFIC VERSION
     //##
 
     //calculating pwm high & low periods
@@ -102,7 +104,7 @@ void initPWMServos()
 char setDutyCycle(char multiplier)
 {
     //##
-    //sets duty cycle of the PWM signal for servos
+    //sets duty cycle of the PWM signal for servos - MASTER SPECIFIC
     //##
 
     //range of the servos
