@@ -20,6 +20,6 @@ void register_interrupt_handler(
     interrupt_handler_t handler
 );
 
-void delay_ms(unsigned int ms);
+void delay_ms(const unsigned int ms);
 
 #endif

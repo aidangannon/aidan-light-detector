@@ -23,10 +23,10 @@ bool tx_buffer_is_empty() {
 
 char tx_buffer_dequeue() {
     if (tx_buffer_is_empty()) {
-        return -1;
+        return 0;
     }
 
-    const char data = tx_buffer.buffer[tx_buffer.index - 1];
+    char data = tx_buffer.buffer[tx_buffer.index - 1];
     tx_buffer.index--;
     return data;
 }

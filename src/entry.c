@@ -2,7 +2,7 @@
 #define FOREVER for(;;)
 
 void main() {
-    init_uart(true, false);
+    init_uart(true);
 
     FOREVER {
     }
