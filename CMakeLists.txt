@@ -31,15 +31,24 @@ else()
 
      set(CMAKE_C_STANDARD 99)
 
-     add_executable(master src/entry.c)
-     target_compile_definitions(master PRIVATE __MASTER__ __MOVEMENTCONFIG__)
-     target_include_directories(master PRIVATE src)
+    # HAL sources for simulation
+    file(GLOB HAL_SOURCES "src/hal/*_sim.c")
 
-     add_executable(slave src/entry.c)
-     target_compile_definitions(slave PRIVATE __SLAVE__)
-     target_include_directories(slave PRIVATE src)
+    add_executable(master
+        src/entry.c
+        ${HAL_SOURCES}
+    )
+    target_compile_definitions(master PRIVATE __MASTER__ __MOVEMENTCONFIG__)
+    target_include_directories(master PRIVATE src src/hal)
 
-     set_target_properties(master slave PROPERTIES
-             EXCLUDE_FROM_ALL FALSE
-     )
+    add_executable(slave
+        src/entry.c
+        ${HAL_SOURCES}
+    )
+    target_compile_definitions(slave PRIVATE __SLAVE__)
+    target_include_directories(slave PRIVATE src src/hal)
+
+    set_target_properties(master slave PROPERTIES
+        EXCLUDE_FROM_ALL FALSE
+    )
 endif()

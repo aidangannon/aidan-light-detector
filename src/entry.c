@@ -1,9 +1,8 @@
-#include "xc8_shim.h"
-#include "common.h"
+#include "uart.h"
 #define FOREVER for(;;)
 
 void main() {
+    init_uart();
     FOREVER {
-
     }
 }
