@@ -1,28 +1,72 @@
 #include <hal_config.h>
 #include <stdbool.h>
-#define UART_ISR 1
 
-/**
- * @brief Initialise the UART module for the PIC16F877A
- * - PORTC[6] becomes transmit pin for UART
- * - PORTC[7] becomes receive pin for UART
- * - 8 bit transmission with no parity
- */
+#include "common.h"
+#define UART_ISR 1
+#define UART_TX_BUFFER_SIZE 64
+
+typedef struct {
+    char buffer[UART_TX_BUFFER_SIZE];
+    volatile unsigned char index;
+    bool transmitting;
+} uart_tx_buffer_t;
+
+static uart_tx_buffer_t tx_buffer;
+
+bool tx_buffer_is_full() {
+    return tx_buffer.index >= UART_TX_BUFFER_SIZE;
+}
+
+bool tx_buffer_is_empty() {
+    return tx_buffer.index == 0;
+}
+
+char tx_buffer_dequeue() {
+    if (tx_buffer_is_empty()) {
+        return -1;
+    }
+
+    const char data = tx_buffer.buffer[tx_buffer.index - 1];
+    tx_buffer.index--;
+    return data;
+}
+
+void handle_uart_interrupt(void) {
+    if (TXIF && TXIE && tx_buffer.transmitting) {
+        if (!tx_buffer_is_empty()) {
+            TXREG = tx_buffer_dequeue();
+        }
+        else {
+            tx_buffer.transmitting = false;
+        }
+
+        TXIF = false;
+    }
+}
+
+bool tx_buffer_try_enqueue(const char data) {
+    if (tx_buffer_is_full()) {
+        return false;
+    }
+    tx_buffer.buffer[tx_buffer.index] = data;
+    tx_buffer.index++;
+    return true;
+}
+
 void init_uart(
-    const bool send_lock_config,
-    const bool interrupt_enabled
+    const bool send_lock_config
 ) {
     // sets TX/TR ports
-    TRISC6 = 1;
-    TRISC7 = 1;
+    TRISC6 = true;
+    TRISC7 = true;
 
     // high baud rate & transmit enabled
-    BRGH = 1;
-    TXEN = 1;
+    BRGH = true;
+    TXEN = true;
 
     // continuous receive & serial port enabled
-    CREN = 1;
-    SPEN = 1;
+    CREN = true;
+    SPEN = true;
 
     // baud rate value https://ww1.microchip.com/downloads/en/devicedoc/39582b.pdf TABLE 10-3:
     SPBRG = 25;
@@ -31,16 +75,22 @@ void init_uart(
     TRISC2 = send_lock_config;
     TRISC3 = !send_lock_config;
 
-    // uart interrupt enable bit
-    if (interrupt_enabled) {
-        RCIE = 1;
-    }
+    register_interrupt_handler(UART_ISR, handle_uart_interrupt);
 }
 
-void uart_transmit(const char data) {
-    TXREG=data;
+bool uart_transmit(const char data) {
+    // unset interrupts to prevent race conditions
+    TXIE = 0;
+    if (!tx_buffer_try_enqueue(data)) {
+        return false;
+    }
 
-    while((PIR1 & 0x10)==0);
+    if (!tx_buffer.transmitting) {
+        tx_buffer.transmitting = true;
+        TXREG = tx_buffer_dequeue();
+    }
 
-    TXIF = 0;
+    // enable interrupts to allow data sending
+    TXIE = 1;
+    return true;
 }

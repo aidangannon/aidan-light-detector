@@ -1,4 +1,4 @@
-#include "interrupt.h"
+#include "common.h"
 
 void register_interrupt_handler(
     char number,

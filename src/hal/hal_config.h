@@ -17,12 +17,16 @@ extern volatile unsigned char TRISC, TXSTA, RCSTA, SPBRG, PIE1, TXREG;
 #define TXEN   TXSTA_bits[5]
 #define CREN   RCSTA_bits[4]
 #define SPEN   RCSTA_bits[7]
-#define RCIE   PIE1_bits[5]
+#define TXIE   PIE1_bits[4]
+#define TXIF   PIR1_bits[4]
 
 extern volatile unsigned char TRISC_bits[8];
 extern volatile unsigned char TXSTA_bits[8];
 extern volatile unsigned char RCSTA_bits[8];
 extern volatile unsigned char PIE1_bits[8];
+extern volatile unsigned char PIR1_bits[8];
+
+void __delay_ms(unsigned int ms);
 
 #define __interrupt()
 
