@@ -32,7 +32,7 @@ else()
      set(CMAKE_C_STANDARD 99)
 
     # HAL sources for simulation
-    file(GLOB HAL_SOURCES "src/hal/*_sim.c")
+    file(GLOB HAL_SOURCES "src/hal/sim/*_sim.c")
 
     add_executable(master
         src/entry.c

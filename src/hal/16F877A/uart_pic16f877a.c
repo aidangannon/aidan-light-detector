@@ -1,7 +1,7 @@
-#include <hal_config.h>
+#include "../hal_config.h"
+#include "../common.h"
 #include <stdbool.h>
 
-#include "common.h"
 #define UART_ISR 1
 #define UART_TX_BUFFER_SIZE 64
 

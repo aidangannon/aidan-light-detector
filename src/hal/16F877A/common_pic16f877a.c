@@ -1,5 +1,5 @@
-#include "hal_config.h"
-#include "common.h"
+#include "../hal_config.h"
+#include "../common.h"
 #define _XTAL_FREQ 4000000
 
 interrupt_handler_t handlers[MAX_INTERRUPTS] = {0};
