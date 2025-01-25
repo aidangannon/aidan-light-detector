@@ -17,7 +17,7 @@ HAL_SOURCES := $(wildcard $(HAL_SOURCES_DIR)/*.c)
 HAL_HEADERS := $(wildcard $(HAL_DIR)/*.h)
 
 ifeq ($(MCU),16F877A)
-	HAL_FILTERED = $(filter %_pic16f877a.c,$(HAL_SOURCES))
+	HAL_FILTERED = $(filter %.c,$(HAL_SOURCES))
 else
 	HAL_FILTERED = $(filter %_sim.c,$(HAL_SOURCES))
 endif
