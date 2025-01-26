@@ -51,51 +51,94 @@ src/hal/
 #endif
 ```
 
-## PWM Implementation
+## PWM State Machine
 
-Uses CCP Compare Mode (not hardware PWM) for 20ms servo periods:
+Table-driven state machine using CCP Compare Mode for 20ms servo periods:
 
 ```c
 typedef enum { LOW, HIGH } pwm_state;
 
+typedef void (*state_handler)(pwm_controller* ctrl);
+
+typedef struct {
+    pwm_state state;
+    state_handler handler;
+} state_transition;
+
+void action_high(pwm_controller* ctrl) {
+    PORTB1 = false;
+    CCPR1 = ctrl->low_period;    // 18-19ms wait period
+    ctrl->state = LOW;
+}
+
+void action_low(pwm_controller* ctrl) {
+    PORTB1 = true;
+    CCPR1 = ctrl->high_period;   // 1-2ms servo pulse
+    ctrl->state = HIGH;
+}
+
+static const state_transition state_table[PWM_STATE_COUNT] = {
+    [HIGH] = { .state = LOW, .handler = action_high },
+    [LOW]  = { .state = HIGH, .handler = action_low }
+};
+
 void handle_interrupt() {
     if (CCP1IF) {
+        pwm_controller* config = get_pwm_controller(NULL);
         CCP1IF = false;
-        if (PORTB1) {
-            PORTB1 = false;
-            CCPR1 = config.low_period;   // 18-19ms wait
-        } else {
-            PORTB1 = true;
-            CCPR1 = config.high_period;  // 1-2ms pulse
-        }
+        state_table[config->state].handler(config);  // Execute state action
     }
 }
 ```
 
 **Why Compare Mode**: Hardware PWM limited to ~4ms periods; servos need 20ms.
+**State Machine**: Clean separation of states with function pointer dispatch.
 
-## UART Queue System
+## UART Ring Buffer
 
-Interrupt-driven transmission with circular buffer:
+Lock-free circular buffer for interrupt-driven transmission:
 
 ```c
 typedef struct {
     char buffer[UART_TX_BUFFER_SIZE];
-    volatile unsigned char index;
+    volatile unsigned char head;     // Write pointer (producer)
+    volatile unsigned char tail;     // Read pointer (consumer) 
     bool transmitting;
-} uart_tx_buffer_t;
+} uart_tx_circular_buffer;
+
+bool tx_buffer_is_full() {
+    return (tx_ring_buffer.head + 1) % UART_TX_BUFFER_SIZE == tx_ring_buffer.tail;
+}
+
+bool tx_buffer_try_enqueue(const char data) {
+    if (tx_buffer_is_full()) return false;
+    
+    tx_ring_buffer.buffer[tx_ring_buffer.head] = data;  // Write at head
+    tx_ring_buffer.head = (tx_ring_buffer.head + 1) % UART_TX_BUFFER_SIZE;  // Wrap around
+    return true;
+}
+
+char tx_buffer_dequeue() {
+    if (tx_buffer_is_empty()) return 0;
+    
+    char data = tx_ring_buffer.buffer[tx_ring_buffer.tail];  // Read from tail
+    tx_ring_buffer.tail = (tx_ring_buffer.tail + 1) % UART_TX_BUFFER_SIZE;  // Wrap around
+    return data;
+}
 
 void handle_uart_interrupt(void) {
-    if (TXIF && TXIE && tx_buffer.transmitting) {
+    if (TXIF && TXIE && tx_ring_buffer.transmitting) {
         if (!tx_buffer_is_empty()) {
-            TXREG = tx_buffer_dequeue();
+            TXREG = tx_buffer_dequeue();  // Send next byte
         } else {
-            tx_buffer.transmitting = false;
+            tx_ring_buffer.transmitting = false;  // Stop transmission
         }
         TXIF = false;
     }
 }
 ```
+
+**Ring Buffer Benefits**: FIFO ordering, efficient memory reuse, lock-free operation.
 
 ## Interrupt Management
 
