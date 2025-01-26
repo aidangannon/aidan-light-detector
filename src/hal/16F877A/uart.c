@@ -2,22 +2,23 @@
 #include "../common.h"
 
 #define UART_ISR 1
-#define UART_TX_BUFFER_SIZE 64
+#define UART_TX_BUFFER_SIZE 8
 
 typedef struct {
     char buffer[UART_TX_BUFFER_SIZE];
-    volatile unsigned char index;
+    volatile unsigned char head;
+    volatile unsigned char tail;
     bool transmitting;
-} uart_tx_buffer_t;
+} uart_tx_circular_buffer;
 
-static uart_tx_buffer_t tx_buffer;
+static uart_tx_circular_buffer tx_ring_buffer = {0};
 
 bool tx_buffer_is_full() {
-    return tx_buffer.index >= UART_TX_BUFFER_SIZE;
+    return (tx_ring_buffer.head + 1) % UART_TX_BUFFER_SIZE == tx_ring_buffer.tail;
 }
 
 bool tx_buffer_is_empty() {
-    return tx_buffer.index == 0;
+    return tx_ring_buffer.head == tx_ring_buffer.tail;
 }
 
 char tx_buffer_dequeue() {
@@ -25,31 +26,31 @@ char tx_buffer_dequeue() {
         return 0;
     }
 
-    char data = tx_buffer.buffer[tx_buffer.index - 1];
-    tx_buffer.index--;
+    char data = tx_ring_buffer.buffer[tx_ring_buffer.tail];
+    tx_ring_buffer.tail = (tx_ring_buffer.tail + 1) % UART_TX_BUFFER_SIZE;
     return data;
-}
-
-void handle_uart_interrupt(void) {
-    if (TXIF && TXIE && tx_buffer.transmitting) {
-        if (!tx_buffer_is_empty()) {
-            TXREG = tx_buffer_dequeue();
-        }
-        else {
-            tx_buffer.transmitting = false;
-        }
-
-        TXIF = false;
-    }
 }
 
 bool tx_buffer_try_enqueue(const char data) {
     if (tx_buffer_is_full()) {
         return false;
     }
-    tx_buffer.buffer[tx_buffer.index] = data;
-    tx_buffer.index++;
+    tx_ring_buffer.buffer[tx_ring_buffer.head] = data;
+    tx_ring_buffer.head = (tx_ring_buffer.head + 1) % UART_TX_BUFFER_SIZE;
     return true;
+}
+
+void handle_uart_interrupt(void) {
+    if (TXIF && TXIE && tx_ring_buffer.transmitting) {
+        if (!tx_buffer_is_empty()) {
+            TXREG = tx_buffer_dequeue();
+        }
+        else {
+            tx_ring_buffer.transmitting = false;
+        }
+
+        TXIF = false;
+    }
 }
 
 void init_uart(
@@ -84,8 +85,8 @@ bool uart_transmit(const char data) {
         return false;
     }
 
-    if (!tx_buffer.transmitting) {
-        tx_buffer.transmitting = true;
+    if (!tx_ring_buffer.transmitting) {
+        tx_ring_buffer.transmitting = true;
         TXREG = tx_buffer_dequeue();
     }
 

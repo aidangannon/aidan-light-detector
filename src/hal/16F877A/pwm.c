@@ -6,6 +6,8 @@
 
 #define PWM_ISR 0
 
+#define PWM_STATE_COUNT 2
+
 typedef enum {
     LOW,
     HIGH
@@ -17,6 +19,30 @@ typedef struct {
     unsigned short low_period;
     pwm_state state;
 } pwm_controller;
+
+typedef void (*state_handler)(pwm_controller* ctrl);
+
+typedef struct {
+    pwm_state state;
+    state_handler handler;
+} state_transition;
+
+void action_high(pwm_controller* ctrl) {
+    PORTB1 = false;
+    CCPR1 = ctrl->low_period;
+    ctrl->state = LOW;
+}
+
+void action_low(pwm_controller* ctrl) {
+    PORTB1 = true;
+    CCPR1 = ctrl->high_period;
+    ctrl->state = HIGH;
+}
+
+static const state_transition state_table[PWM_STATE_COUNT] = {
+    [HIGH] = { .state = LOW, .handler = action_high },
+    [LOW] = { .state = HIGH,  .handler = action_low }
+};
 
 static pwm_controller* get_pwm_controller(const pwm_controller* controller_init) {
     static pwm_controller controller = {0};
@@ -33,15 +59,9 @@ static pwm_controller* get_pwm_controller(const pwm_controller* controller_init)
 void handle_interrupt() {
     if (CCP1IF)
     {
-        pwm_controller config = *get_pwm_controller(NULL);
+        pwm_controller* config = get_pwm_controller(NULL);
         CCP1IF = false;
-        if (PORTB1) {
-            PORTB1 = false;
-            CCPR1 = config.low_period;
-        } else {
-            PORTB1 = true;
-            CCPR1 = config.high_period;
-        }
+        state_table[config->state].handler(config);
         CCP1IF = false;
     }
 }
