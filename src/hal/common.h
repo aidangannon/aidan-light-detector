@@ -1,6 +1,11 @@
 #ifndef INTERRUPT_H
 #define INTERRUPT_H
 
+#define true 1
+#define false 0
+
+typedef unsigned char bool;
+
 //
 /**
  * quite restrictive but really don't want too many interrupts running on single vector
@@ -17,7 +22,7 @@ typedef void (*interrupt_handler_t)(void);
  */
 void register_interrupt_handler(
     char number,
-    interrupt_handler_t handler
+    const interrupt_handler_t handler
 );
 
 void delay_ms(const unsigned int ms);

@@ -1,6 +1,6 @@
 #ifndef UART_H
 #define UART_H
-#include <stdbool.h>
+#include "common.h"
 
 /**
  * @brief Initialise the UART module

@@ -1,8 +1,10 @@
 #include "../hal_config.h"
 #include "../common.h"
+
+#include <stddef.h>
 #define _XTAL_FREQ 4000000
 
-interrupt_handler_t handlers[MAX_INTERRUPTS] = {0};
+static interrupt_handler_t handlers[MAX_INTERRUPTS] = {0};
 
 void register_interrupt_handler(
     const char number,
@@ -21,8 +23,9 @@ void delay_ms(const unsigned int ms) {
 
 void __interrupt() isr(void) {
     for (char i = 0; i < MAX_INTERRUPTS; i++) {
-        if (handlers[i] != 0) {
-            handlers[i]();
+        interrupt_handler_t handler = handlers[i];
+        if (handler != NULL) {
+            handler();
         }
     }
 }
