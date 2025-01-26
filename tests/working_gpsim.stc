@@ -1,0 +1,37 @@
+processor p16f877a
+load s ../build/master/entry.hex
+
+# Set breakpoint at a reasonable cycle count before WDT timeout
+break c 200000
+
+# Monitor key register changes - simplified syntax
+# break w p16f877a.trisb
+# break w p16f877a.t1con
+
+# Run simulation
+run
+
+# Check final register states
+p16f877a.trisb
+p16f877a.trisc  
+p16f877a.intcon
+p16f877a.PIE1
+p16f877a.t1con
+p16f877a.portb1
+p16f877a.ccpr1l
+
+# Create stimulus for input testing (if needed)
+# This can be used to test UART input or button presses
+stimulus asynchronous_stimulus porta0_stimulus
+initial_state 0
+start_cycle 50000
+state 1
+cycle 100000
+state 0
+end
+
+# Attach stimulus to pin (commented for now)
+# node porta0_node
+# attach porta0_node p16f877a.porta0 porta0_stimulus
+
+quit

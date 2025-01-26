@@ -1,0 +1,14 @@
+processor p16f877a
+load s ../build/master/entry.hex
+
+# Run for 200k cycles
+break c 200000
+run
+
+# Check key registers  
+p16f877a.trisb
+p16f877a.t1con
+p16f877a.intcon
+p16f877a.PIE1
+
+quit

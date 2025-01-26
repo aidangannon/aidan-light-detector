@@ -3,9 +3,14 @@
 
 #ifdef __XC8__
 
-#define PORTB1 PORTBbits.RB1
-
 #include <xc.h>
+
+#define PORTB1 PORTBbits.RB1
+#define TRISB1 TRISBbits.TRISB1
+#define TRISC2 TRISCbits.TRISC2
+#define TRISC3 TRISCbits.TRISC3
+#define TRISC6 TRISCbits.TRISC6
+#define TRISC7 TRISCbits.TRISC7
 
 #else
 
@@ -34,12 +39,12 @@ TMR1L;
 #define TXEN   TXSTA_bits[5]
 #define CREN   RCSTA_bits[4]
 #define SPEN   RCSTA_bits[7]
-#define TXIE   PIE1_bits[4]
-#define TXIF   PIR1_bits[4]
-#define CCP1IF PIR1_bits[2]
-#define CCP1IE PIE1_bits[2]
-#define PEIE INTCON_bits[6]
-#define GIE INTCON_bits[7]
+#define TXIE    PIE1_bits[4]
+#define TXIF    PIR1_bits[4]
+#define CCP1IF  PIR1_bits[2]
+#define CCP1IE  PIE1_bits[2]
+#define PEIE  INTCON_bits[6]
+#define GIE   INTCON_bits[7]
 #define TMR1ON T1CON_bits[0]
 
 extern volatile unsigned char TRISB_bits[8];

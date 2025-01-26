@@ -2,7 +2,6 @@
 #include "../common.h"
 
 #include <stddef.h>
-#define _XTAL_FREQ 4000000
 
 static interrupt_descriptor* interrupt_descriptors[MAX_INTERRUPTS] = {0};
 
@@ -15,10 +14,12 @@ void register_interrupt_handler(
     }
 }
 
-void delay_ms(const unsigned int ms) {
-    for (unsigned int i = 0; i < ms; i++) {
-        __delay_ms(1);
-    }
+void enable_global_interrupts() {
+    // enables global interrupts
+    GIE = true;
+
+    // enables peripheral interrupts
+    PEIE = true;
 }
 
 /**

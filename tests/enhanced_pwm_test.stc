@@ -1,0 +1,50 @@
+processor p16f877a
+load s ../build/master/entry.hex
+
+# Set breakpoints for PWM operation monitoring
+break c 300000
+
+# Monitor PWM state changes by setting write breakpoints
+break w p16f877a.portb
+break w p16f877a.ccpr1l
+break w p16f877a.ccpr1h
+
+# Run initial setup
+run
+
+# Display all PWM-related registers after initialization
+p16f877a.trisb
+p16f877a.portb
+p16f877a.t1con
+p16f877a.intcon
+p16f877a.PIE1
+p16f877a.pir1
+p16f877a.ccpr1l
+p16f877a.ccpr1h
+p16f877a.ccp1con
+p16f877a.tmr1l
+p16f877a.tmr1h
+
+# Continue and monitor first PWM operation
+run
+p16f877a.portb
+p16f877a.ccpr1l
+p16f877a.ccpr1h
+p16f877a.tmr1l
+p16f877a.tmr1h
+
+# Continue and monitor next PWM operation  
+run
+p16f877a.portb
+p16f877a.ccpr1l
+p16f877a.ccpr1h
+p16f877a.tmr1l
+p16f877a.tmr1h
+
+# Continue monitoring more operations
+run
+p16f877a.portb
+p16f877a.ccpr1l
+p16f877a.ccpr1h
+
+quit

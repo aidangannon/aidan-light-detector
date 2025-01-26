@@ -13,7 +13,9 @@ void main() {
 
     init_pwm(&servo_config);
 
+    enable_global_interrupts();
+
     FOREVER {
-        // something
+        // do something
     }
 }

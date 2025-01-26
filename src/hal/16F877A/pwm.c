@@ -85,13 +85,6 @@ void init_pwm(const pwm_config* config) {
     // enables the ccp interrupt
     CCP1IE = true;
 
-    // todo: probably need to move some global setup elsewhere
-    // enables global interrupts
-    GIE = true;
-
-    // enables peripheral interrupts
-    PEIE = true;
-
     // enables tmr1
     TMR1ON = true;
 

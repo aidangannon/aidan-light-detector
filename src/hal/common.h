@@ -1,6 +1,8 @@
 #ifndef INTERRUPT_H
 #define INTERRUPT_H
 
+#define _XTAL_FREQ 4000000
+
 #define true 1
 #define false 0
 
@@ -45,6 +47,6 @@ void register_interrupt_handler(
     interrupt_descriptor* handler
 );
 
-void delay_ms(const unsigned int ms);
+void enable_global_interrupts(void);
 
 #endif
