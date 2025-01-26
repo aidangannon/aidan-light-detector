@@ -57,13 +57,8 @@ static pwm_controller* get_pwm_controller(const pwm_controller* controller_init)
 }
 
 void handle_interrupt() {
-    if (CCP1IF)
-    {
-        pwm_controller* config = get_pwm_controller(NULL);
-        CCP1IF = false;
-        state_table[config->state].handler(config);
-        CCP1IF = false;
-    }
+    pwm_controller* config = get_pwm_controller(NULL);
+    state_table[config->state].handler(config);
 }
 
 void init_pwm(const pwm_config* config) {
@@ -103,7 +98,15 @@ void init_pwm(const pwm_config* config) {
     // sets portb 1 as output pin
     TRISB1 = false;
 
-    register_interrupt_handler(PWM_ISR, handle_interrupt);
+    interrupt_descriptor interrupt_config = {
+        .handler = handle_interrupt,
+        .enable_reg = &PIE1,
+        .flag_reg = &PIR1,
+        .enable_mask = 0x04,
+        .flag_mask = 0x04,
+        .clear_type = SOFTWARE
+    };
+    register_interrupt_handler(PWM_ISR, &interrupt_config);
 }
 
 bool set_duty_cycle(const char value) {

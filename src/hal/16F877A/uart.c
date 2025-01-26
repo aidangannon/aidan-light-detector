@@ -41,15 +41,13 @@ bool tx_buffer_try_enqueue(const char data) {
 }
 
 void handle_uart_interrupt(void) {
-    if (TXIF && TXIE && tx_ring_buffer.transmitting) {
+    if (tx_ring_buffer.transmitting) {
         if (!tx_buffer_is_empty()) {
             TXREG = tx_buffer_dequeue();
         }
         else {
             tx_ring_buffer.transmitting = false;
         }
-
-        TXIF = false;
     }
 }
 
@@ -75,12 +73,26 @@ void init_uart(
     TRISC2 = send_lock_config;
     TRISC3 = !send_lock_config;
 
-    register_interrupt_handler(UART_ISR, handle_uart_interrupt);
+    // enable interrupt for transmit
+    TXIE = true;
+    interrupt_descriptor interrupt_config = {
+        .handler = handle_uart_interrupt,
+        .enable_reg = &PIE1,
+        .flag_reg = &PIR1,
+        .enable_mask = 0x10,
+        .flag_mask = 0x10
+    };
+    register_interrupt_handler(UART_ISR, &interrupt_config);
 }
 
+/**
+ * we clear GIE before transmit and re-enable after since there are multiple state increments
+ * occurring on a global ring buffer, this is essentially a lock to prevent the code from jumping
+ * to ISR half-way through a transmission
+ */
 bool uart_transmit(const char data) {
-    // unset interrupts to prevent race conditions
-    TXIE = 0;
+    GIE = false;
+
     if (!tx_buffer_try_enqueue(data)) {
         return false;
     }
@@ -90,7 +102,6 @@ bool uart_transmit(const char data) {
         TXREG = tx_buffer_dequeue();
     }
 
-    // enable interrupts to allow data sending
-    TXIE = 1;
+    GIE = true;
     return true;
 }

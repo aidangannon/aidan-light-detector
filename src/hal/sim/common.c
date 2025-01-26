@@ -2,7 +2,7 @@
 
 void register_interrupt_handler(
     const char number,
-    const interrupt_handler_t* handler
+    interrupt_handler_t* handler
 ) {
     // do nothing
 }

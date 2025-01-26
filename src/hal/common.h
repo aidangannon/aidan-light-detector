@@ -14,6 +14,26 @@ typedef unsigned char bool;
 
 typedef void (*interrupt_handler_t)(void);
 
+typedef enum {
+    /**
+     * hardware clears automatically
+     */
+    HARDWARE,
+    /**
+     * software clears manually
+     */
+    SOFTWARE
+} flag_clear_type;
+
+typedef struct {
+    interrupt_handler_t handler;
+    volatile unsigned char* flag_reg;
+    unsigned char flag_mask;
+    volatile unsigned char* enable_reg;
+    unsigned char enable_mask;
+    flag_clear_type clear_type;
+} interrupt_descriptor;
+
 /**
  * very specific to old implementations of PIC microcontrollers, newer versions
  * have multiple interrupt vectors
@@ -21,8 +41,8 @@ typedef void (*interrupt_handler_t)(void);
  * @param handler the function called when the ISR is run
  */
 void register_interrupt_handler(
-    char number,
-    const interrupt_handler_t handler
+    const char number,
+    interrupt_descriptor* handler
 );
 
 void delay_ms(const unsigned int ms);

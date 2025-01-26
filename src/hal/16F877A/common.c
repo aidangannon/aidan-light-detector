@@ -4,14 +4,14 @@
 #include <stddef.h>
 #define _XTAL_FREQ 4000000
 
-static interrupt_handler_t handlers[MAX_INTERRUPTS] = {0};
+static interrupt_descriptor* interrupt_descriptors[MAX_INTERRUPTS] = {0};
 
 void register_interrupt_handler(
     const char number,
-    const interrupt_handler_t handler
+    interrupt_descriptor* handler
 ) {
     if (number < MAX_INTERRUPTS) {
-        handlers[number] = handler;
+        interrupt_descriptors[number] = handler;
     }
 }
 
@@ -21,11 +21,21 @@ void delay_ms(const unsigned int ms) {
     }
 }
 
+/**
+ * todo: probably a bit inefficient since we're doing a lot of memory lookups
+ */
 void __interrupt() isr(void) {
     for (char i = 0; i < MAX_INTERRUPTS; i++) {
-        interrupt_handler_t handler = handlers[i];
-        if (handler != NULL) {
-            handler();
+        interrupt_descriptor* descriptor = interrupt_descriptors[i];
+        if (descriptor->handler != NULL) {
+            if (*descriptor->flag_reg & descriptor->flag_mask &&
+                *descriptor->enable_reg & descriptor->enable_mask) {
+                descriptor->handler();
+            }
+
+            if (descriptor->clear_type == SOFTWARE) {
+                *descriptor->flag_reg &= ~descriptor->flag_mask;
+            }
         }
     }
 }
