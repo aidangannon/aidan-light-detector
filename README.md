@@ -142,19 +142,87 @@ void handle_uart_interrupt(void) {
 
 ## Interrupt Management
 
-Function pointer registry for modular interrupt handling:
+Descriptor-based interrupt registration system with automatic flag checking and clearing:
 
 ```c
-static interrupt_handler_t handlers[MAX_INTERRUPTS] = {0};
+typedef struct {
+    interrupt_handler_t handler;        // ISR function pointer
+    volatile unsigned char* flag_reg;   // Interrupt flag register (PIR1, etc.)
+    unsigned char flag_mask;            // Bit mask for specific interrupt
+    volatile unsigned char* enable_reg; // Interrupt enable register (PIE1, etc.)
+    unsigned char enable_mask;          // Bit mask for interrupt enable
+    flag_clear_type clear_type;         // HARDWARE or SOFTWARE flag clearing
+} interrupt_descriptor;
+
+static interrupt_descriptor* interrupt_descriptors[MAX_INTERRUPTS] = {0};
+
+void register_interrupt_handler(const char number, interrupt_descriptor* handler) {
+    if (number < MAX_INTERRUPTS) {
+        interrupt_descriptors[number] = handler;
+    }
+}
 
 void __interrupt() isr(void) {
     for (char i = 0; i < MAX_INTERRUPTS; i++) {
-        if (handlers[i] != NULL) {
-            handlers[i]();
+        interrupt_descriptor* descriptor = interrupt_descriptors[i];
+        if (descriptor->handler != NULL) {
+            // Check both flag and enable bits
+            if (*descriptor->flag_reg & descriptor->flag_mask &&
+                *descriptor->enable_reg & descriptor->enable_mask) {
+                descriptor->handler();
+            }
+            
+            // Clear flag if software clearing required
+            if (descriptor->clear_type == SOFTWARE) {
+                *descriptor->flag_reg &= ~descriptor->flag_mask;
+            }
         }
     }
 }
 ```
+
+### Module Registration Examples
+
+**PWM Module** (Timer1 Compare interrupt):
+```c
+void init_pwm(const pwm_config* config) {
+    // Hardware setup...
+    CCP1CON = 0x0B;    // Compare mode
+    CCP1IE = true;     // Enable CCP1 interrupt
+    
+    // Register interrupt handler
+    interrupt_descriptor interrupt_config = {
+        .handler = handle_interrupt,
+        .enable_reg = &PIE1,
+        .flag_reg = &PIR1, 
+        .enable_mask = 0x04,        // CCP1IE bit
+        .flag_mask = 0x04,          // CCP1IF bit
+        .clear_type = SOFTWARE
+    };
+    register_interrupt_handler(PWM_ISR, &interrupt_config);
+}
+```
+
+**UART Module** (Transmit interrupt):
+```c
+void init_uart(const bool send_lock_config) {
+    // Hardware setup...
+    TXIE = true;       // Enable TX interrupt
+    
+    // Register interrupt handler
+    interrupt_descriptor interrupt_config = {
+        .handler = handle_uart_interrupt,
+        .enable_reg = &PIE1,
+        .flag_reg = &PIR1,
+        .enable_mask = 0x10,        // TXIE bit  
+        .flag_mask = 0x10,          // TXIF bit
+        .clear_type = HARDWARE      // TXIF cleared automatically
+    };
+    register_interrupt_handler(UART_ISR, &interrupt_config);
+}
+```
+
+**Benefits**: Automatic flag/enable checking, configurable flag clearing, modular registration by interrupt ID.
 
 ## Memory Usage
 
