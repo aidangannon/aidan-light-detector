@@ -29,7 +29,7 @@ if(USE_XC8)
 else()
     message(STATUS "building with GCC")
 
-     set(CMAKE_C_STANDARD 99)
+    set(CMAKE_C_STANDARD 99)
 
     # HAL sources for simulation
     file(GLOB HAL_SOURCES "src/hal/sim/*.c")

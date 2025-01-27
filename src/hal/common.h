@@ -8,11 +8,10 @@
 
 typedef unsigned char bool;
 
-//
 /**
  * quite restrictive but really don't want too many interrupts running on single vector
  */
-#define MAX_INTERRUPTS 8
+#define MAX_INTERRUPTS 4
 
 typedef void (*interrupt_handler_t)(void);
 

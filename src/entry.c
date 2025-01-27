@@ -1,3 +1,4 @@
+#include "hal_config.h"
 #include "pwm.h"
 #include "uart.h"
 #define FOREVER for(;;)
@@ -16,6 +17,10 @@ void main() {
     enable_global_interrupts();
 
     FOREVER {
-        // do something
+        // ReSharper disable once CppDFAEndlessLoop
+        uart_transmit('H');
+        __delay_ms(5000);
+        uart_transmit('E');
+        uart_transmit('L');
     }
 }

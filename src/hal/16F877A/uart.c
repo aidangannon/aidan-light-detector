@@ -6,28 +6,30 @@
 
 typedef struct {
     char buffer[UART_TX_BUFFER_SIZE];
-    volatile unsigned char head;
-    volatile unsigned char tail;
+    unsigned char head;
+    unsigned char tail;
+    unsigned char count;
     bool transmitting;
 } uart_tx_circular_buffer;
 
 static uart_tx_circular_buffer tx_ring_buffer = {0};
 
 bool tx_buffer_is_full() {
-    return (tx_ring_buffer.head + 1) % UART_TX_BUFFER_SIZE == tx_ring_buffer.tail;
+    return tx_ring_buffer.count == UART_TX_BUFFER_SIZE;
 }
 
 bool tx_buffer_is_empty() {
-    return tx_ring_buffer.head == tx_ring_buffer.tail;
+    return tx_ring_buffer.count == 0;
 }
 
 char tx_buffer_dequeue() {
     if (tx_buffer_is_empty()) {
-        return 0;
+        return false;
     }
 
     char data = tx_ring_buffer.buffer[tx_ring_buffer.tail];
     tx_ring_buffer.tail = (tx_ring_buffer.tail + 1) % UART_TX_BUFFER_SIZE;
+    --tx_ring_buffer.count;
     return data;
 }
 
@@ -35,11 +37,16 @@ bool tx_buffer_try_enqueue(const char data) {
     if (tx_buffer_is_full()) {
         return false;
     }
+
     tx_ring_buffer.buffer[tx_ring_buffer.head] = data;
     tx_ring_buffer.head = (tx_ring_buffer.head + 1) % UART_TX_BUFFER_SIZE;
+    ++tx_ring_buffer.count;
     return true;
 }
 
+/**
+ * TODO: figure out why i need tx_buffer_is_empty check after transmit
+ */
 void handle_uart_interrupt(void) {
     if (tx_ring_buffer.transmitting) {
         if (!tx_buffer_is_empty()) {
