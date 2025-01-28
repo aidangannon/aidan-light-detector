@@ -9,21 +9,13 @@ typedef struct {
     unsigned char head;
     unsigned char tail;
     unsigned char count;
-    bool transmitting;
 } uart_tx_circular_buffer;
 
+static bool transmitting = false;
 static uart_tx_circular_buffer tx_ring_buffer = {0};
 
-bool tx_buffer_is_full() {
-    return tx_ring_buffer.count == UART_TX_BUFFER_SIZE;
-}
-
-bool tx_buffer_is_empty() {
-    return tx_ring_buffer.count == 0;
-}
-
 char tx_buffer_dequeue() {
-    if (tx_buffer_is_empty()) {
+    if (tx_ring_buffer.count == 0) {
         return false;
     }
 
@@ -34,7 +26,8 @@ char tx_buffer_dequeue() {
 }
 
 bool tx_buffer_try_enqueue(const char data) {
-    if (tx_buffer_is_full()) {
+
+    if (tx_ring_buffer.count == UART_TX_BUFFER_SIZE) {
         return false;
     }
 
@@ -44,17 +37,15 @@ bool tx_buffer_try_enqueue(const char data) {
     return true;
 }
 
-/**
- * TODO: figure out why i need tx_buffer_is_empty check after transmit
- */
 void handle_uart_interrupt(void) {
-    if (tx_ring_buffer.transmitting) {
-        if (!tx_buffer_is_empty()) {
-            TXREG = tx_buffer_dequeue();
+    if (transmitting) {
+        const unsigned char dequeue_result = tx_buffer_dequeue();
+        if (dequeue_result == false) {
+            transmitting = false;
+            return;
         }
-        else {
-            tx_ring_buffer.transmitting = false;
-        }
+
+        TXREG = dequeue_result;
     }
 }
 
@@ -93,20 +84,25 @@ void init_uart(
 }
 
 /**
- * we clear GIE before transmit and re-enable after since there are multiple state increments
+ * - we clear GIE before transmit and re-enable after since there are multiple state increments
  * occurring on a global ring buffer, this is essentially a lock to prevent the code from jumping
  * to ISR half-way through a transmission
+ * - not allowed null characters
  */
 bool uart_transmit(const char data) {
     GIE = false;
+
+    if (data == 0x00) {
+        return false;
+    }
 
     if (!tx_buffer_try_enqueue(data)) {
         return false;
     }
 
-    if (!tx_ring_buffer.transmitting) {
-        tx_ring_buffer.transmitting = true;
+    if (transmitting == false) {
         TXREG = tx_buffer_dequeue();
+        transmitting = true;
     }
 
     GIE = true;
