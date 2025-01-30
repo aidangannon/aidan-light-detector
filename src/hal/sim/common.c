@@ -2,11 +2,15 @@
 
 void register_interrupt_handler(
     const char number,
-    interrupt_handler_t* handler
+    interrupt_descriptor* handler
 ) {
     // do nothing
 }
 
-void delay_ms(const unsigned int ms) {
+void enable_global_interrupts() {
+    // do nothing
+}
+
+void __delay_ms(const unsigned int ms) {
     // do nothing
 }

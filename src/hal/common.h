@@ -13,6 +13,8 @@ typedef unsigned char bool;
  */
 #define MAX_INTERRUPTS 4
 
+#define FOREVER for(;;)
+
 typedef void (*interrupt_handler_t)(void);
 
 typedef enum {

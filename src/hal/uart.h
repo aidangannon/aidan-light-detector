@@ -9,7 +9,7 @@
 void init_uart(
     const bool send_lock_config
 );
-bool uart_transmit(char data);
+bool uart_transmit(const char data);
 void handle_uart_interrupt(void);
 
 #endif

@@ -39,7 +39,7 @@ bool tx_buffer_try_enqueue(const char data) {
 
 void handle_uart_interrupt(void) {
     if (transmitting) {
-        const unsigned char dequeue_result = tx_buffer_dequeue();
+        unsigned char dequeue_result = tx_buffer_dequeue();
         if (dequeue_result == false) {
             transmitting = false;
             return;

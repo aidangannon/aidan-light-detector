@@ -1,7 +1,6 @@
 #include "hal_config.h"
 #include "pwm.h"
 #include "uart.h"
-#define FOREVER for(;;)
 
 void main() {
     init_uart(true);
